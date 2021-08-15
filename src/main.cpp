@@ -1,6 +1,5 @@
 #include <Arduino.h>
 #include <microTuple.h>
-#include <Ultrasonic.h>
 
 #define pinTrigger 13
 #define pinEcho 12
@@ -14,13 +13,13 @@
 #define NEAR_DISTANCE 30
 #define FAR_DISTANCE 60
 
-Ultrasonic ultrasonic = Ultrasonic(pinTrigger, pinEcho);
-
 void setup()
 {
   // put your setup code here, to run once:
   Serial.begin(9600);
 
+  pinMode(pinTrigger, OUTPUT);
+  pinMode(pinEcho, INPUT);
   pinMode(pinLedGreen, OUTPUT);
   pinMode(pinLedYellow, OUTPUT);
   pinMode(pinLedRed, OUTPUT);
@@ -39,13 +38,13 @@ void handleSonorousAlert(char distanceCode)
   case 'N':
     useAlert = true;
     interval = 100;
-    frequency = 100;
+    frequency = 400;
     break;
 
   case 'M':
     useAlert = true;
     interval = 500;
-    frequency = 400;
+    frequency = 600;
     break;
 
   case 'F':
@@ -65,7 +64,7 @@ void handleSonorousAlert(char distanceCode)
 
 void handleVisualAlert(char distanceCode)
 {
-  int ledPins[3] = {pinLedGreen, pinLedYellow, pinLedRed};
+  int ledPins[] = {pinLedGreen, pinLedYellow, pinLedRed};
 
   for (const int &pin : ledPins)
     digitalWrite(pin, LOW);
@@ -104,11 +103,16 @@ void handleDistanceAlert(char distanceCode)
 /**
  * Returns MicroTuple<long distanceInCentimeters, char distanceCode> 
 */
-MicroTuple<long, char> getDistance()
+MicroTuple<long, char> getDistanceData()
 {
-  char distanceCode;
+  digitalWrite(pinTrigger, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(pinTrigger, LOW);
 
-  long distanceInCentimeters = ultrasonic.read();
+  long pulseTime = pulseIn(pinEcho, HIGH);
+  double distanceInCentimeters = 0.01715 * pulseTime;
+
+  char distanceCode;
 
   if (distanceInCentimeters < NEAR_DISTANCE)
     distanceCode = 'N';
@@ -124,7 +128,7 @@ MicroTuple<long, char> getDistance()
 
 void loop()
 {
-  auto [distanceInCentimeters, distanceCode] = getDistance();
+  auto [distanceInCentimeters, distanceCode] = getDistanceData();
 
   Serial.println((String)distanceCode.get<0>() + " - " + distanceInCentimeters);
 
